@@ -88,14 +88,9 @@ export class DatabaseStack extends Stack {
       writer: ClusterInstance.serverlessV2('Writer', {
         publiclyAccessible: false,
       }),
-      readers: [
-        ClusterInstance.serverlessV2('Reader', {
-          publiclyAccessible: false,
-          scaleWithWriter: true,
-        }),
-      ],
+      readers: [],
       serverlessV2MinCapacity: 0.5,
-      serverlessV2MaxCapacity: 16,
+      serverlessV2MaxCapacity: 4,
       storageEncrypted: true,
       storageEncryptionKey: databaseEncryptionKey,
       iamAuthentication: true,

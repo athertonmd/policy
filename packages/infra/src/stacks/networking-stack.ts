@@ -51,8 +51,8 @@ export class NetworkingStack extends Stack {
     this.vpc = new Vpc(this, 'Vpc', {
       vpcName: `${prefix}-vpc`,
       ipAddresses: IpAddresses.cidr('10.0.0.0/16'),
-      maxAzs: 3,
-      natGateways: 2,
+      maxAzs: 2,
+      natGateways: 1,
       subnetConfiguration: [
         {
           name: 'Public',

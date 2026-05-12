@@ -21,7 +21,6 @@ import {
   Code,
   Architecture,
   Tracing,
-  Alias,
 } from 'aws-cdk-lib/aws-lambda';
 import { Vpc, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { DatabaseCluster } from 'aws-cdk-lib/aws-rds';
@@ -144,7 +143,7 @@ export class PolicyApiStack extends Stack {
 
     // --- Lambda Functions ---
 
-    // Policy evaluation Lambda (with provisioned concurrency)
+    // Policy evaluation Lambda
     const evaluatePolicyFunction = this.createLambdaFunction(
       'EvaluatePolicy',
       'evaluate-policy',
@@ -156,12 +155,8 @@ export class PolicyApiStack extends Stack {
       10,   // 10s timeout for evaluation
     );
 
-    // Create alias with provisioned concurrency for cold-start mitigation
-    const evaluateAlias = new Alias(this, 'EvaluatePolicyAlias', {
-      aliasName: 'live',
-      version: evaluatePolicyFunction.currentVersion,
-      provisionedConcurrentExecutions: 5,
-    });
+    // Use function directly (no provisioned concurrency in dev to save costs)
+    const evaluateTarget = evaluatePolicyFunction;
 
     // Batch evaluation Lambda
     const evaluateBatchFunction = this.createLambdaFunction(
@@ -252,7 +247,7 @@ export class PolicyApiStack extends Stack {
 
     // POST /v1/policies/evaluate
     const evaluate = policies.addResource('evaluate');
-    evaluate.addMethod('POST', new LambdaIntegration(evaluateAlias), {
+    evaluate.addMethod('POST', new LambdaIntegration(evaluateTarget), {
       authorizationType: AuthorizationType.COGNITO,
       authorizer: cognitoAuthorizer,
     });

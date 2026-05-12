@@ -117,13 +117,14 @@ export class EventBridgeStack extends Stack {
 
     // Register JSON schemas for each event type
     for (const eventType of EVENT_TYPES) {
-      new eventschemas.CfnSchema(this, `Schema${eventType}`, {
+      const schema = new eventschemas.CfnSchema(this, `Schema${eventType}`, {
         registryName,
         schemaName: `${platformName}.${eventType}`,
         type: 'JSONSchemaDraft4',
         content: JSON.stringify(buildEventSchema(eventType)),
         description: `Schema for ${eventType} domain event`,
       });
+      schema.addDependency(registry);
     }
 
     // Catch-all rule routing failed deliveries to DLQ

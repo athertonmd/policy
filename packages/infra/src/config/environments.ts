@@ -37,9 +37,9 @@ export interface PlatformConfig {
  */
 export function getPlatformConfig(): PlatformConfig {
   return {
-    rootDomain: process.env.PLATFORM_DOMAIN ?? 'travel-policy.example.com',
+    rootDomain: process.env.PLATFORM_DOMAIN ?? 'mytravelprofile.info',
     platformName: 'travel-policy-platform',
-    accountId: process.env.CDK_DEFAULT_ACCOUNT ?? '123456789012',
+    accountId: process.env.CDK_DEFAULT_ACCOUNT ?? '412322926502',
   };
 }
 

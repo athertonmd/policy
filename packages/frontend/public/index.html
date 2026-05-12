@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travel Policy Platform - mytravelprofile.info</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { max-width: 640px; padding: 48px; text-align: center; }
+    .logo { font-size: 48px; margin-bottom: 24px; }
+    h1 { color: #1e293b; font-size: 28px; margin-bottom: 12px; }
+    p { color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+    .status { display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; color: #065f46; padding: 8px 16px; border-radius: 9999px; font-size: 14px; font-weight: 500; margin-bottom: 32px; }
+    .status::before { content: ''; width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
+    .endpoints { text-align: left; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .endpoints h2 { font-size: 16px; color: #1e293b; margin-bottom: 16px; }
+    .endpoint { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+    .endpoint:last-child { border-bottom: none; }
+    .endpoint-name { font-size: 14px; color: #475569; font-weight: 500; }
+    .endpoint-url { font-size: 12px; color: #94a3b8; font-family: monospace; }
+    .footer { margin-top: 32px; font-size: 12px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">✈️</div>
+    <h1>Travel Policy Platform</h1>
+    <p>Corporate travel policy orchestration, approval workflows, and compliance monitoring.</p>
+    <div class="status">Platform Deployed</div>
+    <div class="endpoints">
+      <h2>API Endpoints</h2>
+      <div class="endpoint">
+        <span class="endpoint-name">Tenant Management</span>
+        <span class="endpoint-url">/v1/tenants</span>
+      </div>
+      <div class="endpoint">
+        <span class="endpoint-name">Policy Decision</span>
+        <span class="endpoint-url">/v1/policies/evaluate</span>
+      </div>
+      <div class="endpoint">
+        <span class="endpoint-name">Approval Workflows</span>
+        <span class="endpoint-url">/v1/approvals/workflows</span>
+      </div>
+      <div class="endpoint">
+        <span class="endpoint-name">Reporting</span>
+        <span class="endpoint-url">/v1/reports/spend</span>
+      </div>
+      <div class="endpoint">
+        <span class="endpoint-name">AI Recommendations</span>
+        <span class="endpoint-url">/v1/ai/recommendations</span>
+      </div>
+    </div>
+    <p class="footer">mytravelprofile.info · Powered by AWS · eu-west-2</p>
+  </div>
+</body>
+</html>
