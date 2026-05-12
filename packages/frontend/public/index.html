@@ -3,55 +3,233 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>Travel Policy Platform - mytravelprofile.info</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .container { max-width: 640px; padding: 48px; text-align: center; }
-    .logo { font-size: 48px; margin-bottom: 24px; }
-    h1 { color: #1e293b; font-size: 28px; margin-bottom: 12px; }
-    p { color: #64748b; line-height: 1.6; margin-bottom: 24px; }
-    .status { display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; color: #065f46; padding: 8px 16px; border-radius: 9999px; font-size: 14px; font-weight: 500; margin-bottom: 32px; }
-    .status::before { content: ''; width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
-    .endpoints { text-align: left; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .endpoints h2 { font-size: 16px; color: #1e293b; margin-bottom: 16px; }
-    .endpoint { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
-    .endpoint:last-child { border-bottom: none; }
-    .endpoint-name { font-size: 14px; color: #475569; font-weight: 500; }
-    .endpoint-url { font-size: 12px; color: #94a3b8; font-family: monospace; }
-    .footer { margin-top: 32px; font-size: 12px; color: #94a3b8; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; overflow: hidden; }
+
+    .background {
+      position: fixed;
+      inset: 0;
+      background-image: url('https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=2560&q=80');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .login-panel {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+      max-width: 420px;
+      min-height: 100vh;
+      padding: 48px 40px;
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo img {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 12px;
+    }
+
+    .logo h1 {
+      color: white;
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      margin-bottom: 28px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #94a3b8;
+      color: white;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      border-bottom-color: white;
+    }
+
+    .form-group input::placeholder {
+      color: #64748b;
+    }
+
+    .sign-in-btn {
+      width: 100%;
+      padding: 14px;
+      margin-top: 16px;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
+
+    .sign-in-btn:hover {
+      background: #15803d;
+      transform: translateY(-1px);
+    }
+
+    .sign-in-btn:active {
+      transform: translateY(0);
+    }
+
+    .sign-in-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .forgot-password {
+      text-align: center;
+      margin-top: 28px;
+    }
+
+    .forgot-password p {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .forgot-password a {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      letter-spacing: 0.5px;
+    }
+
+    .forgot-password a:hover {
+      color: #e2e8f0;
+    }
+
+    .sso-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .sso-link a {
+      font-size: 13px;
+      color: #94a3b8;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .sso-link a:hover {
+      color: white;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #fca5a5;
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      .login-panel {
+        max-width: 100%;
+        padding: 32px 24px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">✈️</div>
-    <h1>Travel Policy Platform</h1>
-    <p>Corporate travel policy orchestration, approval workflows, and compliance monitoring.</p>
-    <div class="status">Platform Deployed</div>
-    <div class="endpoints">
-      <h2>API Endpoints</h2>
-      <div class="endpoint">
-        <span class="endpoint-name">Tenant Management</span>
-        <span class="endpoint-url">/v1/tenants</span>
-      </div>
-      <div class="endpoint">
-        <span class="endpoint-name">Policy Decision</span>
-        <span class="endpoint-url">/v1/policies/evaluate</span>
-      </div>
-      <div class="endpoint">
-        <span class="endpoint-name">Approval Workflows</span>
-        <span class="endpoint-url">/v1/approvals/workflows</span>
-      </div>
-      <div class="endpoint">
-        <span class="endpoint-name">Reporting</span>
-        <span class="endpoint-url">/v1/reports/spend</span>
-      </div>
-      <div class="endpoint">
-        <span class="endpoint-name">AI Recommendations</span>
-        <span class="endpoint-url">/v1/ai/recommendations</span>
-      </div>
+  <div class="background" aria-hidden="true"></div>
+
+  <div class="login-panel">
+    <div class="logo">
+      <img src="/favicon.svg" alt="Travel Policy Platform logo">
+      <h1>Travel Policy Platform</h1>
     </div>
-    <p class="footer">mytravelprofile.info · Powered by AWS · eu-west-2</p>
+
+    <form id="loginForm" novalidate>
+      <div class="error-message" id="errorMessage" role="alert" aria-live="polite"></div>
+
+      <div class="form-group">
+        <label for="username">Username *</label>
+        <input type="email" id="username" name="username" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password *</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+
+      <button type="submit" class="sign-in-btn" id="signInBtn">SIGN IN</button>
+
+      <div class="forgot-password">
+        <p>Forgot your password?</p>
+        <a href="#reset">RESET PASSWORD</a>
+      </div>
+
+      <div class="sso-link">
+        <a href="#sso">Sign in with SSO →</a>
+      </div>
+    </form>
   </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var btn = document.getElementById('signInBtn');
+      var error = document.getElementById('errorMessage');
+      btn.textContent = 'SIGNING IN...';
+      btn.disabled = true;
+      error.style.display = 'none';
+
+      // Simulate auth — in production this calls Cognito
+      setTimeout(function() {
+        error.textContent = 'Platform is deployed. Cognito authentication will be configured for production use.';
+        error.style.display = 'block';
+        error.style.background = 'rgba(34, 197, 94, 0.15)';
+        error.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+        error.style.color = '#86efac';
+        btn.textContent = 'SIGN IN';
+        btn.disabled = false;
+      }, 1500);
+    });
+  </script>
 </body>
 </html>

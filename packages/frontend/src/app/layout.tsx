@@ -7,6 +7,10 @@ import '@/styles/globals.css';
 export const metadata: Metadata = {
   title: 'Travel Policy Platform',
   description: 'Corporate Travel Policy and Approvals Platform',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
