@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true
+  },
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/infra" },
+    { "path": "packages/services/tenant-management" },
+    { "path": "packages/services/policy-decision" },
+    { "path": "packages/services/policy-configuration" },
+    { "path": "packages/services/approval-workflow" },
+    { "path": "packages/services/booking-ingestion" },
+    { "path": "packages/services/notification" },
+    { "path": "packages/services/audit" },
+    { "path": "packages/services/reporting" },
+    { "path": "packages/services/traveller-profile" },
+    { "path": "packages/services/ai-recommendations" }
+  ],
+  "exclude": ["node_modules", "dist", "packages/frontend"]
+}

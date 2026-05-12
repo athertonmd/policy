@@ -1,0 +1,27 @@
+{
+  "name": "@travel-policy/audit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Audit Service",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -rf dist",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1045.0",
+    "@aws-sdk/lib-dynamodb": "^3.1045.0",
+    "@aws-sdk/client-eventbridge": "^3.1045.0",
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
+    "@travel-policy/shared": "*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

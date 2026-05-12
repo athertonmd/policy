@@ -1,0 +1,441 @@
+openapi: 3.0.3
+info:
+  title: Tenant Management API
+  description: |
+    REST API for managing tenants on the Corporate Travel Policy and Approvals Platform.
+    Provides endpoints for provisioning, configuring, and decommissioning tenants.
+    Authentication is via API key for platform operators.
+  version: 1.0.0
+  contact:
+    name: Platform Engineering
+    email: platform@travel-policy.example.com
+
+servers:
+  - url: https://api.travel-policy.example.com/prod/v1
+    description: Production (UK)
+  - url: https://api-eu.travel-policy.example.com/prod/v1
+    description: Production (EU)
+  - url: https://api-us.travel-policy.example.com/prod/v1
+    description: Production (US)
+  - url: https://api-anz.travel-policy.example.com/prod/v1
+    description: Production (ANZ)
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /tenants:
+    get:
+      operationId: listTenants
+      summary: List all tenants
+      description: Returns a paginated list of tenants with optional filtering by status and region.
+      tags:
+        - Tenants
+      parameters:
+        - name: status
+          in: query
+          description: Filter tenants by status
+          schema:
+            type: string
+            enum: [provisioning, active, suspended, decommissioned]
+        - name: region
+          in: query
+          description: Filter tenants by data residency region
+          schema:
+            type: string
+            enum: [uk, eu, us, anz]
+        - name: limit
+          in: query
+          description: Maximum number of tenants to return (default 20, max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: nextToken
+          in: query
+          description: Pagination token from a previous response
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of tenants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      operationId: provisionTenant
+      summary: Provision a new tenant
+      description: |
+        Creates a new tenant with isolated resources including dedicated database schema,
+        encryption keys, and Cognito user pool. Provisioning completes within 60 seconds.
+      tags:
+        - Tenants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionTenantRequest'
+      responses:
+        '201':
+          description: Tenant provisioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Conflict - tenant with same organisation name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tenants/{tenantId}:
+    parameters:
+      - name: tenantId
+        in: path
+        required: true
+        description: Unique identifier of the tenant (UUID)
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: getTenant
+      summary: Get tenant details
+      description: Returns the full tenant record including configuration and status.
+      tags:
+        - Tenants
+      responses:
+        '200':
+          description: Successful response with tenant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      operationId: updateTenantConfig
+      summary: Update tenant configuration
+      description: Updates the configuration for an existing tenant. Only provided fields are updated.
+      tags:
+        - Tenants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantConfigRequest'
+      responses:
+        '200':
+          description: Tenant configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      operationId: decommissionTenant
+      summary: Decommission a tenant
+      description: |
+        Soft-deletes a tenant, marking it as decommissioned. Data is retained according
+        to the configured retention policy. This operation is irreversible.
+      tags:
+        - Tenants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecommissionTenantRequest'
+      responses:
+        '200':
+          description: Tenant decommissioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict - tenant is already decommissioned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: API key for platform operator authentication
+
+  schemas:
+    ProvisionTenantRequest:
+      type: object
+      required:
+        - organisationName
+        - dataResidencyRegion
+        - adminEmail
+        - plan
+      properties:
+        organisationName:
+          type: string
+          description: Name of the customer organisation
+          minLength: 1
+          maxLength: 255
+          example: Acme Corporation
+        dataResidencyRegion:
+          type: string
+          enum: [uk, eu, us, anz]
+          description: Region where tenant data will be stored
+          example: uk
+        adminEmail:
+          type: string
+          format: email
+          description: Email address of the initial tenant administrator
+          example: admin@acme.com
+        plan:
+          type: string
+          enum: [standard, enterprise]
+          description: Subscription plan for the tenant
+          example: enterprise
+        identityProviderConfig:
+          $ref: '#/components/schemas/IdentityProviderConfig'
+        encryptionConfig:
+          $ref: '#/components/schemas/EncryptionConfig'
+
+    UpdateTenantConfigRequest:
+      type: object
+      properties:
+        organisationName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        plan:
+          type: string
+          enum: [standard, enterprise]
+        config:
+          type: object
+          description: Tenant-specific configuration overrides
+          additionalProperties: true
+
+    DecommissionTenantRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Reason for decommissioning the tenant
+          minLength: 1
+          maxLength: 1000
+          example: Contract terminated by mutual agreement
+
+    Tenant:
+      type: object
+      required:
+        - tenantId
+        - organisationName
+        - dataResidencyRegion
+        - status
+        - schemaName
+        - kmsKeyArn
+        - createdAt
+        - config
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+          description: Unique identifier for the tenant
+        organisationName:
+          type: string
+          description: Name of the customer organisation
+        dataResidencyRegion:
+          type: string
+          enum: [uk, eu, us, anz]
+          description: Region where tenant data is stored
+        status:
+          type: string
+          enum: [provisioning, active, suspended, decommissioned]
+          description: Current lifecycle status of the tenant
+        schemaName:
+          type: string
+          description: PostgreSQL schema name for tenant data isolation
+        kmsKeyArn:
+          type: string
+          description: ARN of the tenant-specific KMS encryption key
+        cognitoUserPoolId:
+          type: string
+          description: Cognito user pool ID for tenant authentication
+        plan:
+          type: string
+          enum: [standard, enterprise]
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the tenant was provisioned
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last configuration update
+        decommissionedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the tenant was decommissioned (if applicable)
+        config:
+          type: object
+          description: Tenant-specific configuration
+          additionalProperties: true
+
+    TenantListResponse:
+      type: object
+      required:
+        - tenants
+        - count
+      properties:
+        tenants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tenant'
+        count:
+          type: integer
+          description: Number of tenants in this response
+        nextToken:
+          type: string
+          description: Pagination token for the next page of results
+
+    IdentityProviderConfig:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [saml, oidc]
+          description: Identity provider protocol
+        metadataUrl:
+          type: string
+          format: uri
+          description: URL to the identity provider metadata document
+        clientId:
+          type: string
+          description: OAuth client ID (for OIDC providers)
+        clientSecret:
+          type: string
+          description: OAuth client secret (for OIDC providers)
+
+    EncryptionConfig:
+      type: object
+      properties:
+        useCustomerManagedKey:
+          type: boolean
+          description: Whether to use a customer-managed KMS key (BYOK)
+          default: false
+        customerKeyArn:
+          type: string
+          description: ARN of the customer-managed KMS key (required if useCustomerManagedKey is true)
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Human-readable error description
+          example: Organisation name is required
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+          description: Field-level validation errors
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Tenants
+    description: Tenant lifecycle management operations

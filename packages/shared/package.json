@@ -1,0 +1,22 @@
+{
+  "name": "@travel-policy/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared types and utilities for the Travel Policy Platform",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -rf dist",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.1045.0"
+  }
+}

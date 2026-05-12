@@ -1,0 +1,6 @@
+dist
+node_modules
+cdk.out
+.next
+coverage
+*.d.ts
