@@ -3,7 +3,7 @@
 ## From: Product Management
 ## To: Product Marketing
 ## Date: May 2026
-## Product: mytravelprofile.info — Corporate Travel Policy & Approvals Platform
+## Product: mytravelpolicy.info — Corporate Travel Policy & Approvals Platform
 
 ---
 
