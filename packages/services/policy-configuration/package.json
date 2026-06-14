@@ -14,7 +14,7 @@
   "dependencies": {
     "@aws-sdk/client-eventbridge": "^3.1045.0",
     "@aws-sdk/client-s3": "^3.1045.0",
-    "@aws-sdk/client-secrets-manager": "^3.1045.0",
+    "@aws-sdk/client-secrets-manager": "^3.1047.0",
     "@travel-policy/shared": "*",
     "peggy": "^4.0.0",
     "pg": "^8.20.0"
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.161",
     "@types/pg": "^8.20.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.4.0",
     "vitest": "^1.4.0"
   }

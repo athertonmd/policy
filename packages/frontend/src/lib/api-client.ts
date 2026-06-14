@@ -5,7 +5,9 @@
 
 import { getAccessToken } from './auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+const POLICY_API_URL = process.env.NEXT_PUBLIC_POLICY_API_URL || '/api';
+const APPROVAL_API_URL = process.env.NEXT_PUBLIC_APPROVAL_API_URL || '/api';
+const TENANT_API_URL = process.env.NEXT_PUBLIC_TENANT_API_URL || '/api';
 
 export interface ApiError {
   statusCode: number;
@@ -32,22 +34,28 @@ class ApiClient {
     body?: unknown,
     params?: Record<string, string>
   ): Promise<T> {
-    const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
+    let url: string;
+    if (this.baseUrl.startsWith('http')) {
+      url = `${this.baseUrl}${path}`;
+    } else {
+      url = `${window.location.origin}${this.baseUrl}${path}`;
+    }
+
     if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.set(key, value);
-      });
+      const searchParams = new URLSearchParams(params);
+      url += `?${searchParams.toString()}`;
     }
 
     const token = getAccessToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'x-tenant-id': 'tenant-001',
     };
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers['Authorization'] = token;
     }
 
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
@@ -194,8 +202,11 @@ export interface PolicyVersion {
 
 export interface CreatePolicyRequest {
   name: string;
-  description: string;
-  dsl: string;
+  description?: string;
+  dslSource: string;
+  priority?: number;
+  effectiveFrom?: string;
+  effectiveTo?: string;
 }
 
 export interface UpdatePolicyRequest {
@@ -375,4 +386,9 @@ export interface CreateOverrideRequest {
   tripDetails: Record<string, unknown>;
 }
 
-export const apiClient = new ApiClient(API_BASE_URL);
+export const policyApi = new ApiClient(POLICY_API_URL);
+export const approvalApi = new ApiClient(APPROVAL_API_URL);
+export const tenantApi = new ApiClient(TENANT_API_URL);
+
+// Default export for backward compatibility
+export const apiClient = policyApi;

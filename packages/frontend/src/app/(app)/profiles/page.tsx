@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin } from 'lucide-react';
+import { Search, MapPin, Plus, X } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { DataTable, type Column } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -81,12 +81,134 @@ const MOCK_PROFILES: TravellerProfile[] = [
   },
 ];
 
+function CreateProfileForm({ onClose, onCreated }: { onClose: () => void; onCreated: (profile: TravellerProfile) => void }) {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    department: '',
+    jobTitle: '',
+    costCentre: '',
+    managerId: '',
+    city: '',
+    country: 'UK',
+    grade: 'Standard',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSaving(true);
+
+    // Create profile locally (in production this calls the API)
+    const newProfile: TravellerProfile = {
+      id: `u-${Date.now()}`,
+      email: formData.email,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      department: formData.department,
+      costCentre: formData.costCentre,
+      jobTitle: formData.jobTitle,
+      managerId: formData.managerId || undefined,
+      loyaltyProgrammes: [],
+      preferences: {},
+      location: formData.city ? { country: formData.country, city: formData.city, latitude: 0, longitude: 0 } : undefined,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsSaving(false);
+    onCreated(newProfile);
+  }
+
+  const isValid = formData.firstName && formData.lastName && formData.email && formData.department;
+
+  return (
+    <div className="card border-brand-200 bg-brand-50/30">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Add New Traveller</h2>
+        <button onClick={onClose} type="button" className="rounded-md p-1 text-gray-400 hover:text-gray-600" aria-label="Close form">
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name *</label>
+            <input id="firstName" name="firstName" type="text" required value={formData.firstName} onChange={handleChange} className="input-field mt-1" placeholder="James" />
+          </div>
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name *</label>
+            <input id="lastName" name="lastName" type="text" required value={formData.lastName} onChange={handleChange} className="input-field mt-1" placeholder="Smith" />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email *</label>
+            <input id="email" name="email" type="email" required value={formData.email} onChange={handleChange} className="input-field mt-1" placeholder="james.smith@company.com" />
+          </div>
+          <div>
+            <label htmlFor="department" className="block text-sm font-medium text-gray-700">Department *</label>
+            <select id="department" name="department" required value={formData.department} onChange={handleChange} className="input-field mt-1">
+              <option value="">Select department</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Sales">Sales</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Finance">Finance</option>
+              <option value="Executive">Executive</option>
+              <option value="Operations">Operations</option>
+              <option value="HR">HR</option>
+              <option value="Legal">Legal</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700">Job Title</label>
+            <input id="jobTitle" name="jobTitle" type="text" value={formData.jobTitle} onChange={handleChange} className="input-field mt-1" placeholder="Senior Engineer" />
+          </div>
+          <div>
+            <label htmlFor="costCentre" className="block text-sm font-medium text-gray-700">Cost Centre</label>
+            <input id="costCentre" name="costCentre" type="text" value={formData.costCentre} onChange={handleChange} className="input-field mt-1" placeholder="ENG-001" />
+          </div>
+          <div>
+            <label htmlFor="grade" className="block text-sm font-medium text-gray-700">Grade / Policy Tier</label>
+            <select id="grade" name="grade" value={formData.grade} onChange={handleChange} className="input-field mt-1">
+              <option value="Standard">Standard</option>
+              <option value="Senior">Senior</option>
+              <option value="Director">Director</option>
+              <option value="Executive">Executive</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="city" className="block text-sm font-medium text-gray-700">City</label>
+            <input id="city" name="city" type="text" value={formData.city} onChange={handleChange} className="input-field mt-1" placeholder="London" />
+          </div>
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium text-gray-700">Country</label>
+            <input id="country" name="country" type="text" value={formData.country} onChange={handleChange} className="input-field mt-1" placeholder="UK" />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 pt-2">
+          <button type="submit" disabled={!isValid || isSaving} className="btn-primary">
+            {isSaving ? 'Saving...' : 'Create Traveller'}
+          </button>
+          <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function ProfilesContent() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [profiles, setProfiles] = useState<TravellerProfile[]>(MOCK_PROFILES);
 
-  const filteredProfiles = MOCK_PROFILES.filter((profile) => {
+  const filteredProfiles = profiles.filter((profile) => {
     const fullName = `${profile.firstName} ${profile.lastName}`.toLowerCase();
     const matchesSearch =
       fullName.includes(searchQuery.toLowerCase()) ||
@@ -157,7 +279,28 @@ function ProfilesContent() {
             Manage traveller profiles, preferences, and locations
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateForm(true)}
+          className="btn-primary"
+        >
+          <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          Add Traveller
+        </button>
       </div>
+
+      {/* Create Profile Form */}
+      {showCreateForm && (
+        <div className="mt-6">
+          <CreateProfileForm
+            onClose={() => setShowCreateForm(false)}
+            onCreated={(profile) => {
+              setProfiles((prev) => [profile, ...prev]);
+              setShowCreateForm(false);
+            }}
+          />
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -212,13 +355,13 @@ function ProfilesContent() {
             <MapPin className="mx-auto h-8 w-8 text-gray-400" aria-hidden="true" />
             <p className="mt-2 text-sm text-gray-500">Interactive map showing current traveller locations</p>
             <p className="text-xs text-gray-400 mt-1">
-              {MOCK_PROFILES.filter((p) => p.location).length} travellers with known locations
+              {profiles.filter((p) => p.location).length} travellers with known locations
             </p>
           </div>
         </div>
         {/* Location list */}
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {MOCK_PROFILES.filter((p) => p.location).map((profile) => (
+          {profiles.filter((p) => p.location).map((profile) => (
             <div key={profile.id} className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2">
               <MapPin className="h-3 w-3 text-brand-500" aria-hidden="true" />
               <span className="text-xs text-gray-700">

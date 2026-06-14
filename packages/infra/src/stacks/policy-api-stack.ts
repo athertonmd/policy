@@ -103,6 +103,7 @@ export class PolicyApiStack extends Stack {
           'Authorization',
           'X-Amz-Date',
           'X-Amz-Security-Token',
+          'x-tenant-id',
         ],
         maxAge: Duration.hours(1),
       },
@@ -151,6 +152,7 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-decision/dist-bundled',
       1024, // Higher memory for performance target
       10,   // 10s timeout for evaluation
     );
@@ -166,6 +168,7 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-decision/dist-bundled',
       1024,
       30,
     );
@@ -178,6 +181,7 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
       512,
       30,
     );
@@ -190,6 +194,7 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
       512,
       30,
     );
@@ -202,6 +207,7 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
       512,
       30,
     );
@@ -214,6 +220,7 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
       512,
       30,
     );
@@ -226,8 +233,48 @@ export class PolicyApiStack extends Stack {
       vpc,
       lambdaSecurityGroup,
       lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
       512,
       30,
+    );
+
+    // List rules Lambda
+    const listRulesFunction = this.createLambdaFunction(
+      'ListRules',
+      'list-rules',
+      prefix,
+      vpc,
+      lambdaSecurityGroup,
+      lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
+      512,
+      10,
+    );
+
+    // Update rule Lambda
+    const updateRuleFunction = this.createLambdaFunction(
+      'UpdateRule',
+      'update-rule',
+      prefix,
+      vpc,
+      lambdaSecurityGroup,
+      lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
+      512,
+      30,
+    );
+
+    // Delete rule Lambda
+    const deleteRuleFunction = this.createLambdaFunction(
+      'DeleteRule',
+      'delete-rule',
+      prefix,
+      vpc,
+      lambdaSecurityGroup,
+      lambdaEnvironment,
+      '../services/policy-configuration/dist-bundled',
+      512,
+      10,
     );
 
     // Grant Lambda functions access to the database secret
@@ -239,6 +286,9 @@ export class PolicyApiStack extends Stack {
       databaseCluster.secret.grantRead(activateVersionFunction);
       databaseCluster.secret.grantRead(listVersionsFunction);
       databaseCluster.secret.grantRead(rollbackVersionFunction);
+      databaseCluster.secret.grantRead(listRulesFunction);
+      databaseCluster.secret.grantRead(updateRuleFunction);
+      databaseCluster.secret.grantRead(deleteRuleFunction);
     }
 
     // --- API Resources ---
@@ -275,8 +325,26 @@ export class PolicyApiStack extends Stack {
       authorizer: cognitoAuthorizer,
     });
 
+    // GET /v1/policies/rules — list rules
+    rules.addMethod('GET', new LambdaIntegration(listRulesFunction), {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: cognitoAuthorizer,
+    });
+
     // /v1/policies/rules/{ruleId}
     const ruleById = rules.addResource('{ruleId}');
+
+    // PUT /v1/policies/rules/{ruleId} — update rule
+    ruleById.addMethod('PUT', new LambdaIntegration(updateRuleFunction), {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: cognitoAuthorizer,
+    });
+
+    // DELETE /v1/policies/rules/{ruleId} — delete rule
+    ruleById.addMethod('DELETE', new LambdaIntegration(deleteRuleFunction), {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: cognitoAuthorizer,
+    });
 
     // POST /v1/policies/rules/{ruleId}/activate
     const activate = ruleById.addResource('activate');
@@ -396,6 +464,7 @@ export class PolicyApiStack extends Stack {
     vpc: Vpc,
     securityGroup: SecurityGroup,
     environment: Record<string, string>,
+    codePath: string,
     memorySize: number = 512,
     timeoutSeconds: number = 30,
   ): LambdaFunction {
@@ -404,7 +473,7 @@ export class PolicyApiStack extends Stack {
       runtime: Runtime.NODEJS_20_X,
       architecture: Architecture.ARM_64,
       handler: `handlers/${handlerName}.handler`,
-      code: Code.fromAsset('../services/policy-decision/dist'),
+      code: Code.fromAsset(codePath),
       memorySize,
       timeout: Duration.seconds(timeoutSeconds),
       tracing: Tracing.ACTIVE,

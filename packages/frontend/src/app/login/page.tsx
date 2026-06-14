@@ -20,8 +20,12 @@ export default function LoginPage() {
     try {
       await signIn(email, password);
       router.push('/');
-    } catch (err) {
-      setError('Invalid username or password. Please try again.');
+    } catch (err: any) {
+      if (err?.message) {
+        setError(err.message);
+      } else {
+        setError('Invalid username or password. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -43,14 +47,11 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="mb-10 text-center">
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center">
-            <svg
-              viewBox="0 0 64 64"
-              className="h-14 w-14 text-white"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M32 4L4 20v24l28 16 28-16V20L32 4zm0 4.5L54.5 21 32 33.5 9.5 21 32 8.5zM7 22.8l23 13.2v22L7 44.8v-22zm27 35.2V36l23-13.2v22L34 58z" />
-            </svg>
+            <img
+              src="/Logo.png"
+              alt="Travel Policy Platform"
+              className="h-14 w-14 object-contain"
+            />
           </div>
           <h1 className="text-2xl font-light tracking-wide text-white">
             Travel Policy Platform

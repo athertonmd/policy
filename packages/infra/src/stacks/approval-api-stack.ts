@@ -190,7 +190,7 @@ export class ApprovalApiStack extends Stack {
       lambdaEnvironment,
     );
 
-    // Update template Lambda
+    // Update template Lambda (uses same handler as create, routes by HTTP method)
     const updateTemplateFunction = this.createLambdaFunction(
       'UpdateTemplate',
       'update-template',
@@ -405,7 +405,7 @@ export class ApprovalApiStack extends Stack {
       runtime: Runtime.NODEJS_20_X,
       architecture: Architecture.ARM_64,
       handler: `handlers/${handlerName}.handler`,
-      code: Code.fromAsset('../services/approval-workflow/dist'),
+      code: Code.fromAsset('../services/approval-workflow/dist-bundled'),
       memorySize,
       timeout: Duration.seconds(timeoutSeconds),
       tracing: Tracing.ACTIVE,

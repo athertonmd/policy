@@ -1,53 +1,168 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, Code, Save } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RuleBuilder, type RuleCondition, type RuleAction } from '@/components/policies/RuleBuilder';
 import { DSLEditor } from '@/components/policies/DSLEditor';
+import { policyApi } from '@/lib/api-client';
+import { getAccessToken } from '@/lib/auth';
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
+
+const POLICY_API_URL = process.env.NEXT_PUBLIC_POLICY_API_URL || '';
 
 type EditorMode = 'visual' | 'dsl';
 
 function BuilderContent() {
   const router = useRouter();
-  const [mode, setMode] = useState<EditorMode>('visual');
+  const searchParams = useSearchParams();
+  const editRuleId = searchParams.get('edit');
+  const isEditMode = !!editRuleId;
+
+  const [mode, setMode] = useState<EditorMode>(isEditMode ? 'dsl' : 'visual');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [conditions, setConditions] = useState<RuleCondition[]>([]);
   const [actions, setActions] = useState<RuleAction[]>([]);
   const [dslValue, setDslValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(isEditMode);
 
-  // Convert visual builder state to DSL
+  // Load existing rule in edit mode
+  useEffect(() => {
+    if (!editRuleId) return;
+
+    const loadRule = async () => {
+      try {
+        const token = getAccessToken();
+        const response = await fetch(`${POLICY_API_URL}/v1/policies/rules`, {
+          headers: { 'Authorization': token || '', 'x-tenant-id': 'tenant-001' },
+        });
+        if (!response.ok) throw new Error('Failed to load rule');
+        const data = await response.json();
+        const items = data.data?.items || data.items || [];
+        const rule = items.find((r: any) => r.ruleId === editRuleId);
+        if (rule) {
+          setName(rule.name);
+          setDescription(rule.description || '');
+          setDslValue(rule.dslSource || '');
+          setMode('dsl');
+        }
+      } catch (err) {
+        console.error('Failed to load rule for editing:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRule();
+  }, [editRuleId]);
+
+  // Convert visual builder state to DSL matching the parser format
   const generateDSL = () => {
     if (conditions.length === 0 || actions.length === 0) return '';
 
+    // Map UI operators to DSL operators
+    const operatorMap: Record<string, string> = {
+      equals: '==',
+      not_equals: '!=',
+      greater_than: '>',
+      less_than: '<',
+      contains: 'contains',
+      in: 'in',
+    };
+
     const conditionStr = conditions
-      .map((c) => `${c.field} ${c.operator} "${c.value}"`)
-      .join(' and ');
+      .map((c) => {
+        const op = operatorMap[c.operator] || '==';
+        // Numeric values don't need quotes
+        const isNumeric = !isNaN(Number(c.value)) && c.value.trim() !== '';
+        const val = isNumeric ? c.value : `"${c.value}"`;
+        return `${c.field} ${op} ${val}`;
+      })
+      .join('\n  and ');
 
+    // Map UI action types to DSL actions
     const actionStr = actions
-      .map((a) => a.type)
-      .join(', ');
+      .map((a) => {
+        switch (a.type) {
+          case 'approve':
+            return 'approve';
+          case 'reject':
+            return 'reject with reason "Policy violation"';
+          case 'flag':
+            return 'warn with reason "Flagged for review"';
+          case 'require_approval':
+            return 'require approval';
+          case 'notify':
+            return 'warn with reason "Notification required"';
+          default:
+            return 'warn with reason "Unknown action"';
+        }
+      })
+      .join('\n  ');
 
-    return `rule "${name || 'Untitled'}" {\n  when ${conditionStr}\n  then ${actionStr}\n}`;
+    return `rule "${name || 'Untitled'}"\npriority 100\nwhen ${conditionStr}\nthen ${actionStr}`;
   };
 
   const handleSave = async () => {
     setIsSaving(true);
-    // In production, this calls apiClient.createPolicy()
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    router.push('/policies');
+    try {
+      const dsl = mode === 'dsl' ? dslValue : generateDSL();
+
+      if (isEditMode && editRuleId) {
+        // Update existing rule
+        const token = getAccessToken();
+        const response = await fetch(`${POLICY_API_URL}/v1/policies/rules/${editRuleId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token || '',
+            'x-tenant-id': 'tenant-001',
+          },
+          body: JSON.stringify({ name, description: description || undefined, dslSource: dsl, priority: 100 }),
+        });
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.message || `Update failed (${response.status})`);
+        }
+      } else {
+        // Create new rule
+        await policyApi.createPolicy({
+          name,
+          description: description || undefined,
+          dslSource: dsl,
+          priority: 100,
+        });
+      }
+      router.push('/policies');
+    } catch (error: any) {
+      console.error('Failed to save policy:', error);
+      alert(error?.message || 'Failed to save policy. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Policy Rule Builder</h1>
-          <p className="mt-1 text-sm text-gray-500">Create a new policy rule using the visual builder or DSL editor</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isEditMode ? 'Edit Policy Rule' : 'Policy Rule Builder'}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {isEditMode ? 'Modify the policy rule and save changes' : 'Create a new policy rule using the visual builder or DSL editor'}
+          </p>
         </div>
         <button
           onClick={handleSave}
@@ -56,7 +171,7 @@ function BuilderContent() {
           type="button"
         >
           <Save className="mr-1 h-4 w-4" aria-hidden="true" />
-          {isSaving ? 'Saving...' : 'Save Rule'}
+          {isSaving ? 'Saving...' : isEditMode ? 'Update Rule' : 'Save Rule'}
         </button>
       </div>
 

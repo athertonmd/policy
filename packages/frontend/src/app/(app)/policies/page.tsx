@@ -1,60 +1,138 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, Edit2, Trash2, Archive } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable, type Column } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import type { PolicyRule } from '@/lib/api-client';
+import { getAccessToken } from '@/lib/auth';
 
-// Mock data for development
-const MOCK_POLICIES: PolicyRule[] = [
-  {
-    id: 'rule-001',
-    name: 'International Flight Cap',
-    description: 'Cap international economy flights at £2,000',
-    dsl: 'when trip.type == "international" and trip.amount > 2000 then reject',
-    version: 3,
-    status: 'active',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-03-01T14:30:00Z',
-    createdBy: 'admin@company.com',
-  },
-  {
-    id: 'rule-002',
-    name: 'Advance Booking Requirement',
-    description: 'Require 14-day advance booking for domestic flights',
-    dsl: 'when trip.type == "domestic" and trip.advance_days < 14 then flag',
-    version: 1,
-    status: 'active',
-    createdAt: '2024-02-01T09:00:00Z',
-    updatedAt: '2024-02-01T09:00:00Z',
-    createdBy: 'admin@company.com',
-  },
-  {
-    id: 'rule-003',
-    name: 'Business Class Restriction',
-    description: 'Restrict business class to flights over 6 hours',
-    dsl: 'when trip.cabin_class == "business" and trip.duration < 6 then reject',
-    version: 2,
-    status: 'draft',
-    createdAt: '2024-02-20T11:00:00Z',
-    updatedAt: '2024-03-05T16:00:00Z',
-    createdBy: 'policy.admin@company.com',
-  },
-];
+const POLICY_API_URL = process.env.NEXT_PUBLIC_POLICY_API_URL || '';
+
+interface ApiPolicyRule {
+  ruleId: string;
+  name: string;
+  description?: string;
+  dslSource: string;
+  status: string;
+  version: number;
+  priority: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 function PoliciesContent() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [policies, setPolicies] = useState<PolicyRule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredPolicies = MOCK_POLICIES.filter((policy) => {
+  const fetchPolicies = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = getAccessToken();
+      const response = await fetch(`${POLICY_API_URL}/v1/policies/rules`, {
+        headers: {
+          'Authorization': token || '',
+          'x-tenant-id': 'tenant-001',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load policies (${response.status})`);
+      }
+
+      const data = await response.json();
+      // API returns { data: { items: [...] }, metadata: {...} }
+      const responseData = data.data || data;
+      const rules: ApiPolicyRule[] = responseData.items || (Array.isArray(responseData) ? responseData : []);
+
+      setPolicies(rules.map((r) => ({
+        id: r.ruleId,
+        name: r.name,
+        description: r.description || '',
+        dsl: r.dslSource,
+        version: r.version,
+        status: r.status as PolicyRule['status'],
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        createdBy: r.createdBy,
+      })));
+    } catch (err: any) {
+      console.error('Failed to fetch policies:', err);
+      setError(err.message || 'Failed to load policies');
+      // Fall back to empty list
+      setPolicies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleArchive = async (ruleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Archive this policy? It will no longer be evaluated.')) return;
+    try {
+      const token = getAccessToken();
+      const response = await fetch(`${POLICY_API_URL}/v1/policies/rules/${ruleId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': token || '', 'x-tenant-id': 'tenant-001', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
+      });
+      if (!response.ok) throw new Error('Failed to archive');
+      fetchPolicies();
+    } catch (err: any) {
+      alert(err.message || 'Failed to archive policy');
+    }
+  };
+
+  const handleDelete = async (ruleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Permanently delete this policy? This cannot be undone.')) return;
+    try {
+      const token = getAccessToken();
+      const response = await fetch(`${POLICY_API_URL}/v1/policies/rules/${ruleId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token || '', 'x-tenant-id': 'tenant-001' },
+      });
+      if (!response.ok) throw new Error('Failed to delete');
+      fetchPolicies();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete policy');
+    }
+  };
+
+  const handleActivate = async (ruleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const token = getAccessToken();
+      const response = await fetch(`${POLICY_API_URL}/v1/policies/rules/${ruleId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': token || '', 'x-tenant-id': 'tenant-001', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      });
+      if (!response.ok) throw new Error('Failed to activate');
+      fetchPolicies();
+    } catch (err: any) {
+      alert(err.message || 'Failed to activate policy');
+    }
+  };
+
+  useEffect(() => {
+    fetchPolicies();
+  }, []);
+
+  const filteredPolicies = policies.filter((policy) => {
     const matchesSearch =
       policy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      policy.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (policy.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || policy.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -87,6 +165,50 @@ function PoliciesContent() {
         <span className="text-gray-500">
           {new Date(item.updatedAt).toLocaleDateString()}
         </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (item) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/policies/builder?edit=${item.id}`); }}
+            className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+            title="Edit"
+            type="button"
+          >
+            <Edit2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+          {item.status === 'draft' && (
+            <button
+              onClick={(e) => handleActivate(item.id, e)}
+              className="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
+              title="Activate"
+              type="button"
+            >
+              Activate
+            </button>
+          )}
+          {item.status !== 'archived' && (
+            <button
+              onClick={(e) => handleArchive(item.id, e)}
+              className="rounded p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600"
+              title="Archive"
+              type="button"
+            >
+              <Archive className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+          <button
+            onClick={(e) => handleDelete(item.id, e)}
+            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+            title="Delete"
+            type="button"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
       ),
     },
   ];
@@ -145,7 +267,19 @@ function PoliciesContent() {
 
       {/* Table */}
       <div className="mt-6">
-        {filteredPolicies.length === 0 && searchQuery === '' ? (
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : error ? (
+          <div className="card text-center py-8">
+            <p className="text-red-600 text-sm">{error}</p>
+            <button onClick={fetchPolicies} className="btn-secondary mt-3" type="button">
+              <RefreshCw className="mr-1 h-4 w-4" aria-hidden="true" />
+              Retry
+            </button>
+          </div>
+        ) : filteredPolicies.length === 0 && searchQuery === '' ? (
           <EmptyState
             title="No policies yet"
             description="Create your first policy rule to get started."
